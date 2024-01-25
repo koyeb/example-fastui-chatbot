@@ -39,19 +39,24 @@ def api_index(chat: str | None = None, reset: bool = False) -> list[AnyComponent
         c.PageTitle(text='FastUI Chatbot'),
         c.Page(
             components=[
+                # Header
                 c.Heading(text='FastUI Chatbot'),
                 c.Paragraph(text='This is a simple chatbot built with FastUI and MistralAI.'),
+                # Chat history
                 c.Table(
                     data=app.message_history,
                     data_model=MessageHistoryModel,
                     columns=[DisplayLookup(field='message', mode=DisplayMode.markdown, table_width_percent=100)],
                     no_data_message='No messages yet.',
                 ),
+                # Chat form
                 c.ModelForm(model=ChatForm, submit_url=".", method='GOTO'),
+                # Reset chat
                 c.Link(
                     components=[c.Text(text='Reset Chat')],
                     on_click=GoToEvent(url='/?reset=true'),
                 ),
+                # Chatbot response
                 c.Div(
                     components=[
                         c.ServerLoad(
@@ -64,6 +69,7 @@ def api_index(chat: str | None = None, reset: bool = False) -> list[AnyComponent
                     class_name='my-2 p-2 border rounded'),
             ],
         ),
+        # Footer
         c.Footer(
             extra_text='Made with FastUI',
             links=[]
@@ -71,10 +77,10 @@ def api_index(chat: str | None = None, reset: bool = False) -> list[AnyComponent
     ]
 
 
-# async
+# MistralAI response generator
 async def ai_response_generator(prompt: str) -> AsyncIterable[str]:
     # Mistral client
-    mistral_client = MistralClient(api_key=config('MISTRAL_API_KEY'))  # Create the client
+    mistral_client = MistralClient(api_key=config('MISTRAL_API_KEY'))
     system_message = "You are a helpful chatbot. You will help people with answers to their questions."
     # Output variables
     output = f"**User:** {prompt}\n\n"
@@ -93,7 +99,9 @@ async def ai_response_generator(prompt: str) -> AsyncIterable[str]:
     output += f"**Chatbot:** "
     for chunk in mistral_client.chat_stream(model="mistral-small", messages=mistral_messages):
         if token := chunk.choices[0].delta.content or "":
+            # Add the token to the output
             output += token
+            # Send the message
             m = FastUI(root=[c.Markdown(text=output)])
             msg = f'data: {m.model_dump_json(by_alias=True, exclude_none=True)}\n\n'
             yield msg
@@ -106,7 +114,9 @@ async def ai_response_generator(prompt: str) -> AsyncIterable[str]:
         await asyncio.sleep(10)
 
 
+# Empty response generator
 async def empty_response() -> AsyncIterable[str]:
+    # Send the message
     m = FastUI(root=[c.Markdown(text='')])
     msg = f'data: {m.model_dump_json(by_alias=True, exclude_none=True)}\n\n'
     yield msg
@@ -119,6 +129,7 @@ async def empty_response() -> AsyncIterable[str]:
 # SSE endpoint
 @app.get('/api/sse/{prompt}')
 async def sse_ai_response(prompt: str) -> StreamingResponse:
+    # Check if prompt is empty
     if prompt is None or prompt == '' or prompt == 'None':
         return StreamingResponse(empty_response(), media_type='text/event-stream')
     return StreamingResponse(ai_response_generator(prompt), media_type='text/event-stream')
