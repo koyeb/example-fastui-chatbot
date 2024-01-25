@@ -1,1 +1,3 @@
-Building a Cutting-Edge Chatbot: Integrating FastAPI, FastUI, and MistralAI
+# Building a Cutting-Edge Chatbot: Integrating FastAPI, FastUI, and MistralAI
+---
+
