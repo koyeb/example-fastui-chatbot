@@ -77,6 +77,27 @@ def api_index(chat: str | None = None, reset: bool = False) -> list[AnyComponent
     ]
 
 
+# SSE endpoint
+@app.get('/api/sse/{prompt}')
+async def sse_ai_response(prompt: str) -> StreamingResponse:
+    # Check if prompt is empty
+    if prompt is None or prompt == '' or prompt == 'None':
+        return StreamingResponse(empty_response(), media_type='text/event-stream')
+    return StreamingResponse(ai_response_generator(prompt), media_type='text/event-stream')
+
+
+# Empty response generator
+async def empty_response() -> AsyncIterable[str]:
+    # Send the message
+    m = FastUI(root=[c.Markdown(text='')])
+    msg = f'data: {m.model_dump_json(by_alias=True, exclude_none=True)}\n\n'
+    yield msg
+    # Avoid the browser reconnecting
+    while True:
+        yield msg
+        await asyncio.sleep(10)
+
+
 # MistralAI response generator
 async def ai_response_generator(prompt: str) -> AsyncIterable[str]:
     # Mistral client
@@ -112,27 +133,6 @@ async def ai_response_generator(prompt: str) -> AsyncIterable[str]:
     while True:
         yield msg
         await asyncio.sleep(10)
-
-
-# Empty response generator
-async def empty_response() -> AsyncIterable[str]:
-    # Send the message
-    m = FastUI(root=[c.Markdown(text='')])
-    msg = f'data: {m.model_dump_json(by_alias=True, exclude_none=True)}\n\n'
-    yield msg
-    # Avoid the browser reconnecting
-    while True:
-        yield msg
-        await asyncio.sleep(10)
-
-
-# SSE endpoint
-@app.get('/api/sse/{prompt}')
-async def sse_ai_response(prompt: str) -> StreamingResponse:
-    # Check if prompt is empty
-    if prompt is None or prompt == '' or prompt == 'None':
-        return StreamingResponse(empty_response(), media_type='text/event-stream')
-    return StreamingResponse(ai_response_generator(prompt), media_type='text/event-stream')
 
 
 # Prebuilt HTML
